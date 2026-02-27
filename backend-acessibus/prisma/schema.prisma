@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model linhas {
+  id              Int               @id @default(autoincrement())
+  codigo          String            @db.VarChar(100)
+  nome_linha      String            @db.VarChar(60)
+  itinerario      String            @db.LongText
+  sentido         String            @db.VarChar(20)
+  usuarios_linhas usuarios_linhas[]
+}
+
+model usuarios {
+  id              Int               @id @default(autoincrement())
+  nome            String            @db.VarChar(250)
+  email           String            @unique(map: "email") @db.VarChar(250)
+  senha           String            @db.VarChar(255)
+  foto            String?           @db.LongText
+  usuarios_linhas usuarios_linhas[]
+}
+
+model usuarios_linhas {
+  id_usuario    Int
+  id_linha      Int
+  ultimo_acesso DateTime @default(now()) @db.DateTime(0)
+  favorito      Boolean
+  usuarios      usuarios @relation(fields: [id_usuario], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_linhas_ibfk_1")
+  linhas        linhas   @relation(fields: [id_linha], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_linhas_ibfk_2")
+
+  @@id([id_usuario, id_linha])
+  @@index([id_linha], map: "id_linha")
+}
