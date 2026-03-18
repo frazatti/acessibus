@@ -2,5 +2,5 @@
 __pycache__
 /backend-acessibus/google-credentials.json
 .venv
-
-/node_modules
+sessions/
+node_modules/
