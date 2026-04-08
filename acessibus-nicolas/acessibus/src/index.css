@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+  
+/* Estilos globais do seu app - movidos do index.html */
+html, body, #root {
+  height: 100%;
+  overscroll-behavior-y: contain; /* Prevents pull-to-refresh */
+  -webkit-overflow-scrolling: touch; /* Improves scrolling on iOS */
+}
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* Hide scrollbars for a cleaner mobile look */
+::-webkit-scrollbar {
+  display: none;
+}
+body {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+/* Estilos customizados para o min-h-screen-minus-header-footer */
+.min-h-screen-minus-header-footer {
+  min-height: calc(100vh - 64px - 64px); /* Supondo header e footer de 64px cada */
+}
