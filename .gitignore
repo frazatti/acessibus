@@ -4,3 +4,5 @@ __pycache__
 .venv
 sessions/
 node_modules/
+.adk
+linvenv
