@@ -52,6 +52,25 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  // Atalho de Teclado para o Mock (Shift + M)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignora se estiver digitando em um input
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+
+      if (e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        setIsMocking(prev => {
+          console.log(`Mock GPS ${!prev ? 'ATIVADO' : 'DESATIVADO'} via atalho.`);
+          return !prev;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
 
   // Loop do Mock de Viagem (Dispara a injeção a cada X segundos se ativado)
   useEffect(() => {
