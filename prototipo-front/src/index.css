@@ -295,13 +295,53 @@ body {
   font-weight: 600;
 }
 
-.input-group input {
+.input-group input, .input-group select {
   padding: 0.8rem;
   border-radius: 8px;
   border: 1px solid var(--border-color);
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: inherit;
+}
+
+.dev-tools-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dev-tools-section h4 {
+  margin: 0;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+}
+
+.toggle-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.mock-btn {
+  background-color: var(--mic-active-bg);
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.mock-btn.active {
+  background-color: #4CAF50;
 }
 
 .modal-close-btn {
@@ -312,6 +352,15 @@ body {
   border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
+}
+
+/* Add mute state */
+.mic-button.muted {
+  background-color: #ffb74d; 
+}
+.mic-button.recording:not(.muted) {
+  background-color: var(--mic-active-bg);
+  animation: pulse 1.5s infinite;
 }
 
 .nav-item.active {

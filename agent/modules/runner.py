@@ -12,6 +12,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 from google.adk.agents.live_request_queue import LiveRequestQueue
 import asyncio
 
+active_audio_sessions = {}
+
 
 APP_NAME = "acessibus"
 
@@ -114,6 +116,7 @@ async def process_audio_stream(websocket: WebSocket, userID: str, sessionID: str
     )
     
     queue = LiveRequestQueue()
+    active_audio_sessions[sessionID] = queue
 
     async def receive_from_ws():
         try:
@@ -150,4 +153,16 @@ async def process_audio_stream(websocket: WebSocket, userID: str, sessionID: str
                 print(f"Erro no envio WS: {e}")
 
     # Executa ambas rotinas paralelamente (leitura / escrita)
-    await asyncio.gather(receive_from_ws(), send_to_ws())
+    try:
+        await asyncio.gather(receive_from_ws(), send_to_ws())
+    finally:
+        active_audio_sessions.pop(sessionID, None)
+
+async def inject_mock_gps(sessionID: str, message: str):
+    queue = active_audio_sessions.get(sessionID)
+    if queue:
+        # Envia a mensagem text stream direto pra queue conectada ao modelo de vóz do audio
+        content = types.Content(role="user", parts=[types.Part(text=f"[ALERTA GPS MOCK] {message}")])
+        queue.send_content(content)
+        return True
+    return False

@@ -1,0 +1,5 @@
+{
+  "name": "AcessiBus",
+  "description": "Revolucionando a mobilidade urbana para deficientes visuais com IA Voice-First. Pitch Page para o Google Hackathon 2026.",
+  "requestFramePermissions": ["microphone"]
+}
