@@ -209,16 +209,16 @@ Modernize the `acessibus-gustavo` Expo mobile app so it becomes production-ready
 
 ## Recommended Task Breakdown
 
-### Step 0: Setup
-- Confirm repository structure.
-- Ensure `acessibus-gustavo` is the main working folder.
-- Keep `acessibus-nicolas` as reference only.
+### Step 1: TypeScript and code quality ✅ COMPLETED
+- ✅ Created `tsconfig.json`.
+- ✅ Converted `src/context/AuthContext.js` → `AuthContext.tsx`.
+- ✅ Converted `src/services/Api.js` → `Api.ts`.
+- ✅ Converted `src/screens/Home.js` → `Home.tsx`.
+- ✅ Added `.eslintrc.json` for code quality.
+- ✅ Added `.prettierrc` for code formatting.
+- ✅ Updated `package.json` with TS and linting dev dependencies.
 
-### Step 1: TypeScript and code quality
-- Convert `src/context/AuthContext.js` and `src/services/Api.js` to TS.
-- Convert `src/screens/Home.js` → `Home.tsx`.
-- Add or refine ESLint and formatting rules.
-- Add `tsconfig.json` if missing.
+**Next**: Convert remaining screens (`LoginScreen.js`, `SignUp.js`, `Recents.js`, `Favorites.js`, `User.js`, `UpdateUser.js`) to `.tsx`. Run `npm install` to ensure dependencies are available.
 
 ### Step 2: Accessibility and UX
 - Add accessibility labels and roles.
