@@ -13,7 +13,7 @@ datasource db {
 }
 
 model linhas {
-  id              Int               @id @default(autoincrement())
+  id              String            @id @default(uuid())
   codigo          String            @db.VarChar(100)
   nome_linha      String            @db.VarChar(60)
   itinerario      String            @db.LongText
@@ -22,7 +22,7 @@ model linhas {
 }
 
 model usuarios {
-  id              Int               @id @default(autoincrement())
+  id              String            @id @default(uuid())
   nome            String            @db.VarChar(250)
   email           String            @unique(map: "email") @db.VarChar(250)
   senha           String            @db.VarChar(255)
@@ -31,8 +31,8 @@ model usuarios {
 }
 
 model usuarios_linhas {
-  id_usuario    Int
-  id_linha      Int
+  id_linha      String              @db.VarChar(100)
+  id_usuario    String              @db.VarChar(100)
   ultimo_acesso DateTime @default(now()) @db.DateTime(0)
   favorito      Boolean
   usuarios      usuarios @relation(fields: [id_usuario], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_linhas_ibfk_1")
