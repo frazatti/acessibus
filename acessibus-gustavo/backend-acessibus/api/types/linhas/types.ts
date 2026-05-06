@@ -2,13 +2,13 @@ import type z from "zod";
 import type { Prisma } from "../../../generated/prisma/browser";
 import type { CreateLinhaSchema } from "../../schemas/linhaSchema";
 
-export type LinhasWithUsuarios = Prisma.linhasGetPayload<{
+export type LinhaWithUsuarios = Prisma.linhasGetPayload<{
     include: {
         usuarios_linhas: true
     }
 }>
 
-export type Linhas = Prisma.linhasGetPayload<{
+export type Linha = Prisma.linhasGetPayload<{
     include: never
 }>
 
