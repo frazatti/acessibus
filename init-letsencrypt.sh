@@ -3,8 +3,8 @@
 # Script de inicialização para gerar o primeiro certificado SSL via Let's Encrypt
 # Baseado na recomendação padrão da comunidade Docker
 
-if ! [ -x "$(command -v docker-compose)" ]; then
-  echo 'Erro: docker-compose não está instalado.' >&2
+if ! docker compose version > /dev/null 2>&1; then
+  echo 'Erro: docker compose não está instalado.' >&2
   exit 1
 fi
 
@@ -34,17 +34,17 @@ curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/c
 curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > "$data_path/conf/ssl-dhparams.pem"
 
 echo "### Gerando certificado RSA dummy (falso) para iniciar o Nginx..."
-docker-compose run --rm --entrypoint "\
+docker compose run --rm --entrypoint "\
   openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
     -keyout '/etc/letsencrypt/live/$DOMAIN/privkey.pem' \
     -out '/etc/letsencrypt/live/$DOMAIN/fullchain.pem' \
     -subj '/CN=localhost'" certbot
 
 echo "### Iniciando o Nginx..."
-docker-compose up --force-recreate -d frontend
+docker compose up --force-recreate -d frontend
 
 echo "### Deletando os certificados dummy..."
-docker-compose run --rm --entrypoint "\
+docker compose run --rm --entrypoint "\
   rm -Rf /etc/letsencrypt/live/$DOMAIN && \
   rm -Rf /etc/letsencrypt/archive/$DOMAIN && \
   rm -Rf /etc/letsencrypt/renewal/$DOMAIN.conf" certbot
@@ -58,7 +58,7 @@ case "$email" in
   *) email_arg="--email $email" ;;
 esac
 
-docker-compose run --rm --entrypoint "\
+docker compose run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $email_arg \
     $domain_args \
@@ -67,6 +67,6 @@ docker-compose run --rm --entrypoint "\
     --force-renewal" certbot
 
 echo "### Recarregando Nginx..."
-docker-compose exec frontend nginx -s reload
+docker compose exec frontend nginx -s reload
 
 echo "Pronto! O HTTPS está ativo e configurado para renovar automaticamente."
