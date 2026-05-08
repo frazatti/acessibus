@@ -1,8 +1,8 @@
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import os
 import sys
 
-load_dotenv("acessibus/.env")
+load_dotenv(find_dotenv())
 
 api_key = os.environ.get("GOOGLE_API_KEY")
 from google import genai

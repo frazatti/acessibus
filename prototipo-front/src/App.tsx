@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './index.css';
 
 interface ChatMessage {
@@ -13,7 +14,8 @@ export default function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const isMutedRef = useRef(false);
-  const [audioStatus, setAudioStatus] = useState("Aperte o botão para falar");
+  const [audioStatus, setAudioStatus] = useState("Aperte e segure para falar");
+  const isPressedRef = useRef(false);
 
   useEffect(() => {
     isMutedRef.current = isMuted;
@@ -25,13 +27,27 @@ export default function App() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // General States
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginFields, setLoginFields] = useState({ username: "", password: "" });
+
   const [credentials, setCredentials] = useState({
-    userId: "user_teste",
-    name: "Você",
+    userId: "admin",
+    name: "Administrador",
     sessionId: "sessao_123"
+  });
+
+  // GPS/Bússola Real States
+  const [isRealGpsEnabled, setIsRealGpsEnabled] = useState(false);
+  const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number; heading: number | null }>({
+    lat: 0, lng: 0, heading: null
+  });
+  const [targetPos, setTargetPos] = useState({ 
+    lat: -23.48152, // Uniso Sorocaba (exemplo)
+    lng: -47.40052
   });
 
   // Mock Developer Mode States
@@ -71,6 +87,69 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Sensor Tracking (GPS e Bússola)
+  useEffect(() => {
+    let watchId: number;
+    
+    if (isRealGpsEnabled) {
+      if ("geolocation" in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            setCurrentPos(prev => ({ 
+              ...prev, 
+              lat: pos.coords.latitude, 
+              lng: pos.coords.longitude 
+            }));
+          },
+          (err) => console.error("Erro GPS:", err),
+          { enableHighAccuracy: true }
+        );
+      }
+
+      const handleOrientation = (e: DeviceOrientationEvent) => {
+        // webkitCompassHeading é específico do iOS/Safari para bússola real
+        const heading = (e as any).webkitCompassHeading || (e.alpha ? 360 - e.alpha : null);
+        setCurrentPos(prev => ({ ...prev, heading }));
+      };
+
+      window.addEventListener('deviceorientation', handleOrientation);
+      if ((DeviceOrientationEvent as any).requestPermission) {
+        // Em iOS precisa de clique pra pedir permissão, vamos lidar no clique do botão do log
+      }
+
+      return () => {
+        if (watchId) navigator.geolocation.clearWatch(watchId);
+        window.removeEventListener('deviceorientation', handleOrientation);
+      };
+    }
+  }, [isRealGpsEnabled]);
+
+  // Sincronização GPS com Backend
+  useEffect(() => {
+    let interval: any;
+    if (isRealGpsEnabled && isRecording) {
+      interval = setInterval(async () => {
+        try {
+          await fetch("/api/update-position", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionID: credentials.sessionId,
+              lat: currentPos.lat,
+              lng: currentPos.lng,
+              heading: currentPos.heading,
+              targetLat: targetPos.lat,
+              targetLng: targetPos.lng
+            })
+          });
+        } catch (e) {
+          console.error("Erro ao enviar posição real:", e);
+        }
+      }, 5000); // Sincroniza a cada 5 segundos
+    }
+    return () => clearInterval(interval);
+  }, [isRealGpsEnabled, isRecording, currentPos, targetPos, credentials.sessionId]);
+
 
   // Loop do Mock de Viagem (Dispara a injeção a cada X segundos se ativado)
   useEffect(() => {
@@ -84,7 +163,7 @@ export default function App() {
 
         interval = setInterval(async () => {
           try {
-            await fetch("http://localhost:8000/mock-gps", {
+            await fetch("/api/mock-gps", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -117,12 +196,19 @@ export default function App() {
       });
       setAudioStatus("Conectando ao assistente...");
       streamRef.current = stream;
-      wsRef.current = new WebSocket(`ws://localhost:8000/ws/chat/${credentials.userId}/${credentials.sessionId}`);
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = window.location.host;
+      wsRef.current = new WebSocket(`${protocol}//${wsHost}/ws/chat/${credentials.userId}/${credentials.sessionId}`);
 
       wsRef.current.onopen = () => {
-        setAudioStatus("Conectado! Ouvindo...");
         setIsRecording(true);
-        setIsMuted(false);
+        if (isPressedRef.current) {
+          setIsMuted(false);
+          setAudioStatus("Conectado! Ouvindo...");
+        } else {
+          setIsMuted(true);
+          setAudioStatus("Microfone mutado. Aperte e segure para falar");
+        }
 
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
         audioContextRef.current = audioContext;
@@ -135,13 +221,19 @@ export default function App() {
           const pcmData = new Int16Array(inputData.length);
 
           if (isMutedRef.current) {
-            // Mute ativado: Preenche buffers com zeross absolutos para evitar feed reacional da I.A.
-            pcmData.fill(0);
-          } else {
-            for (let i = 0; i < inputData.length; i++) {
-              let s = Math.max(-1, Math.min(1, inputData[i]));
-              pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-            }
+            // Mute ativado (botão não pressionado): 
+            // Não enviamos o buffer pelo WebSocket para evitar consumo de 
+            // créditos da API transmitindo silêncio.
+            
+            // Garantimos apenas o mute local do output (microfonia)
+            const outputData = e.outputBuffer.getChannelData(0);
+            outputData.fill(0);
+            return;
+          }
+
+          for (let i = 0; i < inputData.length; i++) {
+            let s = Math.max(-1, Math.min(1, inputData[i]));
+            pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
           }
 
           wsRef.current.send(pcmData.buffer);
@@ -204,7 +296,7 @@ export default function App() {
     setIsRecording(false);
     setIsMuted(false);
     setIsMocking(false);
-    setAudioStatus("Aperte o botão para falar");
+    setAudioStatus("Aperte e segure para falar");
 
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close();
@@ -218,18 +310,52 @@ export default function App() {
     }
   };
 
-  const handleToggle = () => {
+  const handlePressStart = () => {
+    isPressedRef.current = true;
     if (!isRecording) {
       startRecording();
     } else {
-      // Se já está conectado, inverte o estado de Mutado. Nao fecha a conexão.
-      setIsMuted(prev => {
-        const nextState = !prev;
-        setAudioStatus(nextState ? "Microfone mutado. Só escutando..." : "Conectado! Ouvindo...");
-        return nextState;
-      });
+      setIsMuted(false);
+      setAudioStatus("Conectado! Ouvindo...");
     }
   };
+
+  const handlePressEnd = () => {
+    isPressedRef.current = false;
+    if (isRecording) {
+      setIsMuted(true);
+      setAudioStatus("Microfone mutado. Aperte e segure para falar");
+    } else {
+      setAudioStatus("Conectando... (Mutado)");
+    }
+  };
+
+  // Atalho de Teclado para Push-to-Talk (Espaço)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      if (e.code === 'Space' && mode === 'audio') {
+        e.preventDefault();
+        if (!e.repeat) handlePressStart();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      if (e.code === 'Space' && mode === 'audio') {
+        e.preventDefault();
+        handlePressEnd();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isRecording, mode]);
 
 
   // ===================== TEXT CHAT LOGIC =====================
@@ -242,7 +368,7 @@ export default function App() {
     setIsTyping(true);
 
     try {
-      const response = await fetch("http://localhost:8000/chat", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -264,6 +390,92 @@ export default function App() {
       setIsTyping(false);
     }
   };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+    setIsLoggingIn(true);
+
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: loginFields.username,
+          password: loginFields.password
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || "Falha na autenticação");
+      }
+
+      const data = await response.json();
+      setCredentials({
+        userId: data.user.username,
+        name: data.user.name,
+        sessionId: `sessao_${Math.random().toString(36).substr(2, 9)}`
+      });
+      setIsAuthenticated(true);
+    } catch (err: any) {
+      setLoginError(err.message);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+
+  if (!isAuthenticated) {
+    return (
+      <div className="app-container">
+        <div className="login-container">
+          <div className="login-card">
+            <div className="login-header">
+              <div className="logo-container" style={{ transform: 'scale(1.5)', marginBottom: '1rem' }}>
+                <svg className="logo-icon" viewBox="0 0 24 24">
+                  <path d="M4 16c0 .88.39 1.67 1 2.22V20c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h8v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1.78c.61-.55 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5 1c-.83 0-1.5-.67-1.5-1.5S6.67 14 7.5 14s1.5.67 1.5 1.5S8.33 17 7.5 17zm9 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm1.5-6H6V6h12v5z" />
+                </svg>
+                <span className="logo-text">AcessiBus</span>
+              </div>
+              <h2>Bem-vindo</h2>
+              <p>Entre com suas credenciais de administrador</p>
+            </div>
+
+            <form className="login-form" onSubmit={handleLogin}>
+              <div className="input-group">
+                <label>Usuário</label>
+                <input
+                  type="text"
+                  placeholder="Seu usuário"
+                  value={loginFields.username}
+                  onChange={e => setLoginFields({ ...loginFields, username: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="input-group">
+                <label>Senha</label>
+                <input
+                  type="password"
+                  placeholder="Sua senha"
+                  value={loginFields.password}
+                  onChange={e => setLoginFields({ ...loginFields, password: e.target.value })}
+                  required
+                />
+              </div>
+
+              {loginError && <div className="error-message">{loginError}</div>}
+
+              <button className="login-btn" type="submit" disabled={isLoggingIn}>
+                {isLoggingIn ? "Autenticando..." : "Entrar"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
 
   return (
@@ -315,6 +527,33 @@ export default function App() {
               </div>
 
               <div className="toggle-group">
+                <label>Ativar GPS Real?</label>
+                <button
+                  className={`mock-btn ${isRealGpsEnabled ? 'active' : ''}`}
+                  onClick={() => setIsRealGpsEnabled(!isRealGpsEnabled)}
+                >
+                  {isRealGpsEnabled ? 'ON / Rastreado' : 'OFF'}
+                </button>
+              </div>
+
+              {isRealGpsEnabled && (
+                <div className="dev-tools-section" style={{ border: 'none', padding: 0 }}>
+                  <div className="input-group">
+                    <label>Lat Destino</label>
+                    <input type="number" step="0.00001" value={targetPos.lat} onChange={e => setTargetPos({...targetPos, lat: Number(e.target.value)})} />
+                  </div>
+                  <div className="input-group">
+                    <label>Lng Destino</label>
+                    <input type="number" step="0.00001" value={targetPos.lng} onChange={e => setTargetPos({...targetPos, lng: Number(e.target.value)})} />
+                  </div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.8, color: 'var(--primary-color)' }}>
+                    📡 Lat: {currentPos.lat.toFixed(5)} | Lng: {currentPos.lng.toFixed(5)} <br/>
+                    🧭 Heading: {currentPos.heading?.toFixed(0) ?? 'N/A'}°
+                  </div>
+                </div>
+              )}
+
+              <div className="toggle-group">
                 <label>Ativar Mock na Chamada?</label>
                 <button
                   className={`mock-btn ${isMocking ? 'active' : ''}`}
@@ -343,6 +582,9 @@ export default function App() {
           </svg>
           <span className="logo-text">AcessiBus</span>
         </div>
+        <div style={{ flex: 1, textAlign: 'center', fontSize: '0.8rem', opacity: 0.7 }}>
+          Olá, <strong>{credentials.name}</strong>
+        </div>
         <div className="header-actions">
           <button className="icon-btn theme-btn" onClick={() => setIsDarkMode(!isDarkMode)}>
             {isDarkMode ? (
@@ -362,25 +604,19 @@ export default function App() {
       {mode === 'audio' ? (
         <div className="main-content">
           <button
-            className={`mic-button ${isRecording ? 'recording' : ''} ${isMuted ? 'muted' : ''}`}
-            onClick={handleToggle}
-            aria-label={isRecording ? (isMuted ? "Desmutar microfone" : "Mutar microfone") : "Iniciar conversa"}
+            className={`mic-button ${isRecording && !isMuted ? 'recording' : ''}`}
+            onPointerDown={handlePressStart}
+            onPointerUp={handlePressEnd}
+            onPointerLeave={handlePressEnd}
+            style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+            aria-label={"Aperte e segure para falar"}
           >
-            {isRecording ? (
-              isMuted ? (
-                /* Mute Icon Cross (Mic off) */
-                <svg viewBox="0 0 24 24"><path d="M10.8 4.9c0-.66.54-1.2 1.2-1.2s1.2.54 1.2 1.2l-.01 3.91L15 10.6V5c0-1.66-1.34-3-3-3S9 3.34 9 5v1.18l1.8 1.8V4.9zm8.56 14.15L5.7 5.4 4.29 6.81l3.52 3.52c-.67 1.03-1.12 2.22-1.22 3.52H4.63C4.85 17.5 7.85 20.37 11.5 20.87V23h1v-2.14c1.19-.16 2.3-.59 3.25-1.19l3.2 3.2 1.41-1.42zM12 18.05c-3.1 0-5.63-2.3-5.96-5.3h1.96c.3 1.95 2 3.45 4 3.45.69 0 1.34-.18 1.9-.48l-1.9-1.9v.03zM15 13.1l2.58 2.58c1.18-1.18 1.98-2.8 2.05-4.63h-1.95c-.07 1.3-.61 2.5-1.48 3.45h-1.2z" /></svg>
-              ) : (
-                <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>
-              )
-            ) : (
-              <svg viewBox="0 0 24 24">
-                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-              </svg>
-            )}
+            <svg viewBox="0 0 24 24">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+            </svg>
           </button>
 
-          <div className={`visualizer ${isRecording ? 'active' : ''}`}>
+          <div className={`visualizer ${isRecording && !isMuted ? 'active' : ''}`}>
             <div className="bar"></div>
             <div className="bar"></div>
             <div className="bar"></div>
@@ -401,8 +637,12 @@ export default function App() {
               <p style={{ textAlign: 'center', opacity: 0.5, marginTop: '2rem' }}>Envie uma mensagem para iniciar o chat textual.</p>
             )}
             {messages.map((msg, idx) => (
-              <div key={idx} className={`chat-bubble ${msg.sender}`}>
-                {msg.text}
+              <div key={idx} className={`chat-bubble ${msg.sender} ${msg.sender === 'agent' ? 'markdown-body' : ''}`}>
+                {msg.sender === 'agent' ? (
+                  <ReactMarkdown>{msg.text}</ReactMarkdown>
+                ) : (
+                  msg.text
+                )}
               </div>
             ))}
             {isTyping && (

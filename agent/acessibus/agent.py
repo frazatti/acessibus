@@ -2,10 +2,11 @@ from google.adk.agents import Agent
 import googlemaps
 from typing import Optional, Union
 from datetime import datetime
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import os
 
-load_dotenv()
+# find_dotenv() busca o arquivo .env navegando para as pastas pais até a raiz
+load_dotenv(find_dotenv())
 
 
 API_MAPS = os.getenv('GOOGLE_MAPS_KEY')
@@ -55,21 +56,19 @@ def buscarHorarios(id_origem: str, id_destino: str, horario_partida:Optional[str
 
 acessiBusTextAgent = Agent(
     name ='acessibus_text',
-    model = 'gemini-2.5-flash',
+    model = 'gemini-3-flash-preview',
     description = 'Assistente de texto focado em guiar o trajeto de transporte público para pessoas com deficiência visual de forma descritiva e em formato de passo a passo.',
-    instruction="""Você é o 'AcessiBus', um assistente virtual gentil e prestativo dedicado a ajudar pessoas cegas ou com baixa visão a navegar pelo transporte público.
-    Suas respostas devem ser sempre simples, diretas e fáceis de entender, formatadas em passos de fácil leitura.
+    instruction="""Você é o 'AcessiBus', um assistente virtual focado em ajudar pessoas com deficiência visual a navegar pelo transporte público.
 
-    **Seu fluxo de trabalho obrigatório:**
-    1. **Entidades:** Identifique a Origem, o Destino e o Horário (se o usuário não disser um horário, use o atual).
-    2. **Locais:** Chame a ferramenta `buscarPlaceId` para a origem e depois para o destino. 
-    3. **Rota:** Logo em seguida, chame `buscarHorarios` com os IDs locais obtidos.
-    4. **Resposta Final:** Traduza os resultados da ferramenta em um guia passo a passo humano.
+    **Regras de Comunicação (MUITO IMPORTANTE):**
+    - Seja EXTREMAMENTE breve, direto e use linguagem do dia a dia.
+    - Dê as instruções em formato de Markdown usando **negrito** para destacar os nomes dos locais e ônibus.
+    - Formate em bullet points curtos para facilitar a leitura.
 
-    **Regras estritas:**
-    - NUNCA inclua informações desnecessárias como CEPs, códigos, Place IDs ou detalhes técnicos do Google Maps.
-    - NUNCA descreva os parâmetros das funções que você usou.
-    - Seja literal em guiar: "Primeiro, ande de onde você está até a parada X. Pegue a linha Y e desça na parada Z."
+    **Fluxo de Trabalho:**
+    1. Use `buscarPlaceId` para origem e destino.
+    2. Use `buscarHorarios` para obter a rota.
+    3. Retorne apenas o passo-a-passo. NUNCA cite os dados brutos da API, place IDs, nem explique as ferramentas usadas.
     """,
     tools = [buscarHorarios, buscarPlaceId]
 )

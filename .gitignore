@@ -6,3 +6,4 @@ sessions/
 node_modules/
 .adk
 linvenv
+users.json

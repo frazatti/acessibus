@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # Agente - Backend (Isolado)
+  backend:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - GOOGLE_MAPS_KEY=${GOOGLE_MAPS_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    # Porta 8000 NÃO está listada em 'ports', logo não é acessível de fora
+    networks:
+      - acessibus-net
+    volumes:
+      - agent-data:/app/sessions
+      - ./agent/users.json:/app/users.json
+
+  # Frontend - Servidor Web e Proxy Reverso (Porta de Entrada)
+  frontend:
+    build:
+      context: ./prototipo-front
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - DOMAIN=${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - acessibus-net
+    depends_on:
+      - backend
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+
+  # Certbot - Serviço auxiliar para geração/renovação de certificados HTTPS
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  acessibus-net:
+    driver: bridge
+
+volumes:
+  agent-data:
