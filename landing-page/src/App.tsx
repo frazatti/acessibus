@@ -23,6 +23,8 @@ import {
   Send,
 } from "lucide-react";
 import Logo from "./assets/Logo.png";
+import Carrossel1 from "./assets/carrossel1.png";
+import Carrossel3 from "./assets/carrossel3.png";
 
 // --- Components ---
 
@@ -132,6 +134,70 @@ const TechBadge = ({ icon: Icon, label }: { icon: any; label: string }) => (
     {label}
   </div>
 );
+
+const TeamCarousel = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const images = [
+    {
+      url: Carrossel1,
+      title: "Inovação com Propósito",
+    },
+    {
+      url: Carrossel3,
+      title: "Impacto Global",
+    }
+  ];
+
+  // Efeito para trocar os slides automaticamente a cada 5 segundos
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentIndex((prev: number) => (prev + 1) % images.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [images.length]);
+
+  return (
+    <div className="relative w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
+      <div className="relative aspect-video w-full sm:aspect-[21/9]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentIndex}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="absolute inset-0 flex items-center justify-center bg-midnight"
+          >
+            {/* Imagem do slide com cor normal e sem opacidade */}
+            <img
+              src={images[currentIndex].url}
+              alt={images[currentIndex].title}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Controles de navegação (Dots) */}
+      <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-3">
+        {images.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            className={`h-2.5 rounded-full shadow-md transition-all duration-300 ${
+              index === currentIndex
+                ? "w-8 bg-google-blue"
+                : "w-2.5 bg-white/60 hover:bg-white/90"
+            }`}
+            aria-label={`Ir para o slide ${index + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 
 // --- Main App ---
 
@@ -393,7 +459,7 @@ export default function App() {
         <div className="container mx-auto">
           <div className="mb-20 text-center">
             <h2 className="font-display text-4xl font-bold text-slate-50 sm:text-5xl">
-              'Solução
+              Solução
             </h2>
             <p className="mt-4 text-slate-400">
               Uma infraestrutura de mobilidade invisível e onipresente.
@@ -440,8 +506,7 @@ export default function App() {
                 Arquitetura do Sistema
               </div>
               <h2 className="font-display text-4xl font-bold text-slate-50 sm:text-5xl">
-                Engenharia orientada a <br />
-                latência zero
+                IA  Orientada Para Impacto Social  
               </h2>
               <p className="mt-6 text-slate-400 leading-relaxed">
                 Nossa arquitetura foi desenhada com um único propósito: tempo de
@@ -504,6 +569,71 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Team & Partners Section */}
+      <section id="team" className="py-32 px-6">
+        <div className="container mx-auto">
+          <div className="mb-20 text-center">
+            <h2 className="font-display text-4xl font-bold text-slate-50 sm:text-5xl">Nossa Equipe & Parceiros</h2>
+            <p className="mt-4 text-slate-400">Pessoas e instituições que tornam o AcessiBus uma realidade.</p>
+          </div>
+
+          <div className="flex flex-col items-center gap-16">
+            {/* Team Carousel */}
+            <TeamCarousel />
+
+            {/* Partners Grid */}
+            <div className="w-full max-w-5xl">
+              <h4 className="mb-12 text-center font-mono text-sm uppercase tracking-[0.3em] text-slate-500">Parceiros & Instituições</h4>
+              <div className="grid grid-cols-2 items-center justify-items-center gap-10 md:grid-cols-4 md:gap-12">
+                {/* Google */}
+                <motion.div 
+                  whileHover={{ y: -8 }}
+                  className="flex flex-col items-center gap-4 transition-all"
+                >
+                  <div className="flex h-20 w-40 items-center justify-center rounded-2xl bg-white/5 border border-white/5 p-4 transition-all hover:bg-white/10 hover:border-google-blue/30 shadow-2xl">
+                     <span className="font-display text-2xl font-bold text-white">Google</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Hackathon 2026</span>
+                </motion.div>
+
+                {/* ASAC */}
+                <motion.div 
+                  whileHover={{ y: -8 }}
+                  className="flex flex-col items-center gap-4 transition-all"
+                >
+                  <div className="flex h-20 w-40 items-center justify-center rounded-2xl bg-white/5 border border-white/5 p-4 transition-all hover:bg-white/10 hover:border-neon-purple/30 shadow-2xl text-center">
+                    <span className="font-display text-xl font-bold text-white tracking-widest">ASAC</span>
+                  </div>
+                  <span className="text-[8px] text-center font-bold uppercase tracking-[0.15em] text-slate-500">Assoc. Sorocabana <br/> Def. Visuais</span>
+                </motion.div>
+
+                {/* AI Tinkerers */}
+                <motion.div 
+                  whileHover={{ y: -8 }}
+                  className="flex flex-col items-center gap-4 transition-all"
+                >
+                   <div className="flex h-20 w-40 items-center justify-center rounded-2xl bg-white/5 border border-white/5 p-4 transition-all hover:bg-white/10 hover:border-google-blue/30 shadow-2xl">
+                    <span className="font-display text-lg font-bold text-white">AI Tinkerers</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Tech Partner</span>
+                </motion.div>
+
+                {/* UNISO */}
+                <motion.div 
+                  whileHover={{ y: -8 }}
+                  className="flex flex-col items-center gap-4 transition-all"
+                >
+                  <div className="flex h-20 w-40 items-center justify-center rounded-2xl bg-white/5 border border-white/5 p-4 transition-all hover:bg-white/10 hover:border-neon-purple/30 shadow-2xl">
+                    <span className="font-display text-2xl font-bold text-white italic tracking-[0.2em]">UNISO</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Apoio Acadêmico</span>
+                </motion.div>
               </div>
             </div>
           </div>
