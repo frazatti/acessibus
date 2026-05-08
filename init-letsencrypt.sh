@@ -8,6 +8,13 @@ if ! docker compose version > /dev/null 2>&1; then
   exit 1
 fi
 
+# Carrega as variáveis do arquivo .env automaticamente
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
+
 domains=($DOMAIN)
 rsa_key_size=4096
 data_path="./data/certbot"
