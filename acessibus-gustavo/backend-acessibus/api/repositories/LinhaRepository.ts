@@ -1,15 +1,17 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+import { PrismaClient } from "@prisma/client";
+import type { CreateLinhaInput, Linha } from "../types/linhas/types";
 
-class LinhaRepository {
+const prisma: PrismaClient = new PrismaClient();
+
+export class LinhaRepository {
     
-    async create(data) {
+    public async create(data: CreateLinhaInput): Promise<Linha> {
         return await prisma.linhas.create({
             data: data
         })
     }
 
-    async findByTerm(termo) {
+    public async findByTerm(termo: string): Promise<Linha[] | null> {
         return await prisma.linhas.findMany({
             where: {
                 OR: [
@@ -20,11 +22,9 @@ class LinhaRepository {
         });
     }
 
-    async findById(id) {
+    public async findById(id: string): Promise<Linha | null> {
         return await prisma.linhas.findUnique({
             where: { id: Number(id) }
         });
     }
 }
-
-module.exports = new LinhaRepository();

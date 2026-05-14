@@ -1,6 +1,6 @@
 import type z from "zod";
 import type { Prisma } from "../../../generated/prisma/browser";
-import type { CreateUsuarioSchema } from "../../schemas/usuarioSchema";
+import type { CreateUsuarioSchema, UpdateUsuarioSchema, UsuarioOutputSchema } from "../../schemas/UsuarioSchema";
 
 export type UsuarioWithLinhas = Prisma.usuariosGetPayload<{
     include: {
@@ -13,3 +13,5 @@ export type Usuario = Prisma.usuariosGetPayload<{
 }>
 
 export type CreateUsuarioInput = z.infer<typeof CreateUsuarioSchema>
+export type UpdateUsuarioInput = z.infer<typeof UpdateUsuarioSchema>
+export type UsuarioOutput = z.infer<typeof UsuarioOutputSchema>
