@@ -31,7 +31,7 @@ export class VoiceService {
         });
     }
 
-    async transcribeAudio(originalFilePath: string) {
+    public async transcribeAudio(originalFilePath: string) {
         let convertedFilePath: string | undefined = undefined;
         try {
             console.log("Convertendo áudio para formato compatível...")

@@ -1,26 +1,21 @@
 import { UsuarioRepository } from "../repositories/UsuarioRepository";
-import type { Usuario, UsuarioOutput, UpdateUsuarioInput } from "../types/usuarios/types";
+import type { Usuario, UsuarioOutput, UpdateUsuarioInput, CreateUsuarioInput } from "../types/usuarios/types";
 import bcrypt from "bcryptjs";
-
-const usuarioRepository: UsuarioRepository = new UsuarioRepository()
 
 export class UsuarioService {
 
-    public async create(nome: string, email: string, senha: string, foto?: string): Promise<UsuarioOutput> {
-        const userExists: Usuario | null = await usuarioRepository.findUserByEmail(email);
+    private usuarioRepository = new UsuarioRepository();
+
+    public async create(data: CreateUsuarioInput): Promise<UsuarioOutput> {
+        const userExists: Usuario | null = await this.usuarioRepository.findUserByEmail(data.email);
 
         if (userExists) {
-            throw new Error("Já existe um usuário com este email");
+            throw new Error("Email inválido");
         }
 
         const salt: string = await bcrypt.genSalt(10)
-        const hashedPassword: string = await bcrypt.hash(senha, salt)
-        const newUser = await usuarioRepository.create({
-            nome,
-            email,
-            senha: hashedPassword,
-            foto
-        });
+        const hashedPassword: string = await bcrypt.hash(data.senha, salt)
+        const newUser = await this.usuarioRepository.create({ ...data, senha: hashedPassword });
 
         const { senha: _, foto: newUserFoto, ...userOutput } = newUser;
         return {
@@ -30,13 +25,13 @@ export class UsuarioService {
     }
 
     public async updateUser(id: string, data: UpdateUsuarioInput): Promise<UsuarioOutput> {
-        const user: Usuario | null = await usuarioRepository.findUserById(id);
+        const user: Usuario | null = await this.usuarioRepository.findUserById(id);
         if (!user) {
             throw new Error("Usuário não encontrado.")
         }
 
         if (data.email && data.email !== user.email) {
-            const emailInUse = await usuarioRepository.findUserByEmail(data.email);
+            const emailInUse = await this.usuarioRepository.findUserByEmail(data.email);
             if (emailInUse && emailInUse.id !== id) {
                 throw new Error("Email inválido, por favor, insira outro email.");
             }
@@ -56,7 +51,7 @@ export class UsuarioService {
             updateData.senha = newSenha
         }
 
-        const updatedUser = await usuarioRepository.update(id, updateData);
+        const updatedUser = await this.usuarioRepository.update(id, updateData);
         if (!updatedUser) {
             throw new Error("Falha ao atualizar usuário");
         }
@@ -69,7 +64,7 @@ export class UsuarioService {
     }
 
     public async getUserById(id: string): Promise<UsuarioOutput> {
-        const user = await usuarioRepository.findUserById(id);
+        const user = await this.usuarioRepository.findUserById(id);
         if (!user) {
             throw new Error("Não foi possível encontrar o usuário");
         }

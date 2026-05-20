@@ -1,5 +1,5 @@
 import { InteracaoRepository } from "../repositories/InteracaoRepository";
-import type { AssignUsuarioToLinhaInput, InteracaoOutput, LinhaAssigned, UsuariosWithLinhas } from "../types/usuariosLinhas/types";
+import type { AssignUsuarioToLinhaInput, InteracaoOutput, UsuariosWithLinhas } from "../types/usuariosLinhas/types";
 
 export class InteracaoService {
 
@@ -35,7 +35,7 @@ export class InteracaoService {
         return await this.interacaoRepository.updateFavorito(data);
     }
 
-    async getFavoritos(userId: string): Promise<InteracaoOutput[]> {
+    public async getFavoritos(userId: string): Promise<InteracaoOutput[]> {
         const favoritos = await this.interacaoRepository.getFavoritos(userId);
 
         return favoritos.map(item =>({

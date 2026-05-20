@@ -5,6 +5,7 @@ import type { LoginInput, LoginOutput } from "../types/auth/types";
 import { LoginSchema } from "../schemas/AuthSchema";
 
 export class AuthService {
+    
     private usuarioRepository = new UsuarioRepository();
     
     public async login(data: LoginInput): Promise<LoginOutput> {

@@ -11,7 +11,7 @@ export class LinhaRepository {
         })
     }
 
-    public async findByTerm(termo: string): Promise<Linha[] | null> {
+    public async findByTermo(termo: string): Promise<Linha[] | null> {
         return await prisma.linhas.findMany({
             where: {
                 OR: [
