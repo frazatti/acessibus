@@ -4,7 +4,7 @@ import { verify } from "jsonwebtoken";
 
 export class OptionalAuthMiddleware {
 
-    validation = (req: AuthRequest, res: Response, next: any) => {
+    public async validation(req: AuthRequest, res: Response, next: any) {
         const authHeader = req.headers.authorization;
 
         if (!authHeader) {
