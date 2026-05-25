@@ -6,12 +6,9 @@ export class VoiceController {
     private voiceService: VoiceService = new VoiceService();
 
     public async transcribe(req: Request, res: Response) {
-
-        const body = req.body;
+        const audioFile = req.file as Express.Multer.File | undefined;
 
         try {
-            const audioFile = body.file;
-
             if (!audioFile) {
                 return res.status(400).json({ error: 'nenhum áudio enviado' });
             }
@@ -24,14 +21,14 @@ export class VoiceController {
 
             unlinkSync(audioFile.path);
 
-            return res.status(200).json({ text: textoTranscrito })
+            return res.status(200).json({ text: textoTranscrito });
         } catch (error) {
             console.log("Erro na transcrição:", error);
 
-            if (body.file && existsSync(body.file.path)) {
-                unlinkSync(body.file.path);
+            if (audioFile && existsSync(audioFile.path)) {
+                unlinkSync(audioFile.path);
             }
-            return res.status(500).json({ error: "Erro ao transcrever o áudio" })
+            return res.status(500).json({ error: "Erro ao transcrever o áudio" });
         }
     }
 }

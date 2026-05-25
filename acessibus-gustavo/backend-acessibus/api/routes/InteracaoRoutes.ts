@@ -6,10 +6,10 @@ const router = express.Router();
 const authMiddleware: AuthMiddleware = new AuthMiddleware();
 const interacaoController: InteracaoController = new InteracaoController();
 
-router.get('/recents', authMiddleware.validation, interacaoController.getRecentes);
+router.get('/recents', authMiddleware.validation.bind(authMiddleware), interacaoController.getRecentes.bind(interacaoController));
 
-router.get('/favorites', authMiddleware.validation, interacaoController.getFavoritos);
+router.get('/favorites', authMiddleware.validation.bind(authMiddleware), interacaoController.getFavoritos.bind(interacaoController));
 
-router.post('/favorite', authMiddleware.validation, interacaoController.updateFavorito);
+router.put('/favorite', authMiddleware.validation.bind(authMiddleware), interacaoController.updateFavorito.bind(interacaoController));
 
 export default router;

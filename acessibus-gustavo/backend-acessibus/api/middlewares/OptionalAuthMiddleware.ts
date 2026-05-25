@@ -1,10 +1,10 @@
-import type { Response } from "express";
+import type { Response, NextFunction } from "express";
 import type { AuthRequest, TokenPayload } from "../types/auth/types";
 import { verify } from "jsonwebtoken";
 
 export class OptionalAuthMiddleware {
 
-    public async validation(req: AuthRequest, res: Response, next: any) {
+    public async validation(req: AuthRequest, res: Response, next: NextFunction) {
         const authHeader = req.headers.authorization;
 
         if (!authHeader) {

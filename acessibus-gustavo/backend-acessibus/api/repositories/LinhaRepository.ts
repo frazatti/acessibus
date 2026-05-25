@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/prisma";
 import type { CreateLinhaInput, Linha } from "../types/linhas/types";
-
-const prisma: PrismaClient = new PrismaClient();
 
 export class LinhaRepository {
     
@@ -24,7 +22,7 @@ export class LinhaRepository {
 
     public async findById(id: string): Promise<Linha | null> {
         return await prisma.linhas.findUnique({
-            where: { id: Number(id) }
+            where: { id }
         });
     }
 }

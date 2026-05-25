@@ -2,7 +2,7 @@ import { CreateUsuarioSchema } from "../schemas/UsuarioSchema";
 import { UsuarioService } from "../services/UsuarioService";
 import { AuthService } from "../services/AuthService";
 import type { Usuario, UsuarioOutput } from "../types/usuarios/types";
-import type { LoginInput } from "../types/auth/types";
+import type { LoginInput, AuthRequest } from "../types/auth/types";
 import type { Request, Response } from 'express'
 
 export class UserController {
@@ -44,14 +44,17 @@ export class UserController {
         }
     }
 
-    public async update(req: Request, res: Response) {
+    public async update(req: AuthRequest, res: Response) {
         try {
+            const userId = req.userId;
+            if (!userId) {
+                return res.status(401).json({ error: "Acesso negado" });
+            }
 
             const body: Usuario = req.body;
+            const { id: _, ...data } = body;
 
-            const { id: id, ...data } = body;
-
-            const updatedUser = await this.usuarioService.updateUser(id, data);
+            const updatedUser = await this.usuarioService.updateUser(userId, data);
 
             return res.json(updatedUser);
 
@@ -93,15 +96,18 @@ export class UserController {
         }
     }
 
-    public async getProfile(req: Request, res: Response) {
+    public async getProfile(req: AuthRequest, res: Response) {
         try {
-            const body: Usuario = req.body;
+            const userId = req.userId;
+            if (!userId) {
+                return res.status(401).json({ error: "Acesso negado" });
+            }
 
-            const user: UsuarioOutput = await this.usuarioService.getUserById(body.id)
+            const user: UsuarioOutput = await this.usuarioService.getUserById(userId);
             return res.json(user);
         } catch (error) {
             console.log(error);
-            return res.status(500).json({ error: "Erro ao buscar perfil" })
+            return res.status(500).json({ error: "Erro ao buscar perfil" });
         }
     }
 }
