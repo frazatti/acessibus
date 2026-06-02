@@ -9,7 +9,8 @@
     // See also https://aka.ms/tsconfig/module
     "module": "esnext",
     "target": "es2023",
-    "types": ["node"],
+    // remove explicit "node" types reference to avoid missing @types/node errors
+    // If you need Node typings, install them with: npm i -D @types/node
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],
