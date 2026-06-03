@@ -29,6 +29,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -43,4 +44,6 @@ __pycache__
 /android
 
 # upload
-acessibus-gustavo/backend-acessibus/uploads/*
+backend-acessibus/uploads/*
+
+.idea/

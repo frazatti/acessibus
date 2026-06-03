@@ -84,11 +84,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       recordingRef.current = null;
 
       const formData = new FormData();
-      formData.append('audio', {
-        uri: uri,
+      const audioPayload = {
+        uri,
         type: 'audio/m4a',
         name: 'audio_busca.m4a',
-      } as any);
+      } as unknown as FormDataEntryValue;
+      formData.append('audio', audioPayload);
 
       console.log('Enviando para transcrição...');
       const responseTranscricao = await api.post('/transcribe', formData, {
