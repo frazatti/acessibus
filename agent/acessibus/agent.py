@@ -75,8 +75,8 @@ acessiBusTextAgent = Agent(
 
 acessiBusAudioAgent = Agent(
     name='acessibus_audio',
-    # Utilizamos o modelo 2.5 Live para garantir baixa latência e compatibilidade com o google-adk
-    model='gemini-2.5-flash-native-audio-latest',
+    # Utilizamos o modelo 3.1 Live para garantir baixa latência e compatibilidade com o google-adk
+    model='gemini-3.1-flash-live-preview',
     description='Assistente de voz focado em guiar o trajeto de transporte público para pessoas com deficiência visual com orientações sonoras naturais, precisas e objetivas.',
     # O prompt foi adaptado para a experiência de fala: mais direto e sem formatação visual (listas, etc)
     instruction="""Você é o 'AcessiBus', um assistente virtual gentil e prestativo dedicado a ajudar pessoas cegas ou com baixa visão a navegar pelo transporte público através de voz.
