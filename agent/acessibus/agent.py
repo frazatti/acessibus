@@ -10,6 +10,8 @@ load_dotenv(find_dotenv())
 
 
 API_MAPS = os.getenv('GOOGLE_MAPS_KEY')
+TEXT_MODEL = os.getenv('TEXT_MODEL', 'gemini-2.5-flash')
+AUDIO_MODEL = os.getenv('AUDIO_MODEL', 'gemini-3.1-flash-live-preview')
 
 if not API_MAPS:
     raise ValueError("Erro ao carregar API do maps! Verifique o .env :C")
@@ -56,7 +58,7 @@ def buscarHorarios(id_origem: str, id_destino: str, horario_partida:Optional[str
 
 acessiBusTextAgent = Agent(
     name ='acessibus_text',
-    model = 'gemini-2.5-flash',
+    model = TEXT_MODEL,
     description = 'Assistente de texto focado em guiar o trajeto de transporte público para pessoas com deficiência visual de forma descritiva e em formato de passo a passo.',
     instruction="""Você é o 'AcessiBus', um assistente virtual focado em ajudar pessoas com deficiência visual a navegar pelo transporte público.
 
@@ -75,8 +77,8 @@ acessiBusTextAgent = Agent(
 
 acessiBusAudioAgent = Agent(
     name='acessibus_audio',
-    # Utilizamos o modelo 3.1 Live para garantir baixa latência e compatibilidade com o google-adk
-    model='gemini-3.1-flash-live-preview',
+    # Utilizamos o modelo Live para garantir baixa latência e compatibilidade com o google-adk
+    model=AUDIO_MODEL,
     description='Assistente de voz focado em guiar o trajeto de transporte público para pessoas com deficiência visual com orientações sonoras naturais, precisas e objetivas.',
     # O prompt foi adaptado para a experiência de fala: mais direto e sem formatação visual (listas, etc)
     instruction="""Você é o 'AcessiBus', um assistente virtual gentil e prestativo dedicado a ajudar pessoas cegas ou com baixa visão a navegar pelo transporte público através de voz.

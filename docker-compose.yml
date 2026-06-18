@@ -10,6 +10,8 @@ services:
     environment:
       - GOOGLE_MAPS_KEY=${GOOGLE_MAPS_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - TEXT_MODEL=${TEXT_MODEL:-gemini-2.5-flash}
+      - AUDIO_MODEL=${AUDIO_MODEL:-gemini-3.1-flash-live-preview}
     # Porta 8000 NÃO está listada em 'ports', logo não é acessível de fora
     networks:
       - acessibus-net
