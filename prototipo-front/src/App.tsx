@@ -41,7 +41,7 @@ export default function App() {
   });
 
   // GPS/Bússola Real States
-  const [isRealGpsEnabled, setIsRealGpsEnabled] = useState(false);
+  const [isRealGpsEnabled, setIsRealGpsEnabled] = useState(true);
   const [currentPos, setCurrentPos] = useState<{ lat: number; lng: number; heading: number | null }>({
     lat: 0, lng: 0, heading: null
   });
@@ -51,7 +51,7 @@ export default function App() {
   });
 
   // Mock Developer Mode States
-  const [isMocking, setIsMocking] = useState(false);
+  const [isMocking, setIsMocking] = useState(true);
   const [mockDelay, setMockDelay] = useState(8); // Segundos
   const [mockStartDelay, setMockStartDelay] = useState(30); // Delay inicial em segundos
 
