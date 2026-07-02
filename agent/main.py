@@ -21,10 +21,10 @@ import logging
 # Isso garante que a injeção de Mock GPS (textos curtos) funcione sem precisarmos
 # alterar a biblioteca instalada no site-packages.
 try:
+    print("Tentando aplicar monkey patch em GeminiLlmConnection...", flush=True)
     from google.adk.models.gemini_llm_connection import GeminiLlmConnection
     from google.genai import types
     
-    _adk_logger = logging.getLogger("adk_monkey_patch")
     _original_send_content = GeminiLlmConnection.send_content
 
     async def _patched_send_content(self, content: types.Content):
@@ -32,7 +32,7 @@ try:
         if not content.parts[0].function_response:
             # Desvio estratégico para Mock GPS e textos curtos em Live stream
             if len(content.parts) == 1 and content.parts[0].text:
-                _adk_logger.debug('MonkeyPatch: Enviando texto curto via send_realtime_input')
+                print("MonkeyPatch: Enviando texto curto via send_realtime_input", flush=True)
                 await self._gemini_session.send_realtime_input(text=content.parts[0].text)
                 return
         
@@ -40,7 +40,7 @@ try:
         await _original_send_content(self, content)
 
     GeminiLlmConnection.send_content = _patched_send_content
-    _adk_logger.info("Monkey patch aplicado com sucesso em GeminiLlmConnection.send_content")
+    print("Monkey patch aplicado com sucesso em GeminiLlmConnection.send_content", flush=True)
 
     _original_send_realtime = GeminiLlmConnection.send_realtime
 
@@ -48,19 +48,20 @@ try:
         if isinstance(input, types.Blob):
             mime = getattr(input, "mime_type", "") or ""
             if mime.startswith("audio/"):
-                _adk_logger.debug("MonkeyPatch: Enviando audio via parameter 'audio'")
+                print("MonkeyPatch: Enviando audio via parameter 'audio'", flush=True)
                 await self._gemini_session.send_realtime_input(audio=input)
                 return
             elif mime.startswith("video/"):
-                _adk_logger.debug("MonkeyPatch: Enviando video via parameter 'video'")
+                print("MonkeyPatch: Enviando video via parameter 'video'", flush=True)
                 await self._gemini_session.send_realtime_input(video=input)
                 return
         await _original_send_realtime(self, input)
 
     GeminiLlmConnection.send_realtime = _patched_send_realtime
-    _adk_logger.info("Monkey patch aplicado com sucesso em GeminiLlmConnection.send_realtime")
-except ImportError as e:
-    logging.getLogger("adk_monkey_patch").error(f"Erro ao aplicar monkey patch: {e}")
+    print("Monkey patch aplicado com sucesso em GeminiLlmConnection.send_realtime", flush=True)
+except Exception as e:
+    print(f"ERRO CRÍTICO AO APLICAR MONKEY PATCH: {e}", flush=True)
+    raise e
 # ============================================================================
 
 # Define que o limitador de requisições rastreará o IP dos usuários

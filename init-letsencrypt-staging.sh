@@ -1,9 +1,8 @@
 #!/bin/bash
 
-# Script de inicialização para gerar o primeiro certificado SSL via Let's Encrypt (PRODUÇÃO)
-# ATENÇÃO: Use este script apenas quando tiver certeza de que o DNS e portas estão funcionando perfeitamente.
-# Para testes e evitar bloqueios (rate limit), utilize './init-letsencrypt-staging.sh'.
-
+# Script de inicialização para gerar o primeiro certificado SSL via Let's Encrypt (STAGING / TESTES)
+# Use este script para testar a conectividade, portas e DNS sem gastar o limite de requisições (rate limit) de produção.
+# Os certificados gerados aqui serão considerados "não confiáveis" pelo navegador, mas provam que a infraestrutura está correta.
 
 if ! docker compose version > /dev/null 2>&1; then
   echo 'Erro: docker compose não está instalado.' >&2
@@ -35,7 +34,7 @@ if [ -d "$data_path" ]; then
   fi
 fi
 
-echo "### Preparando diretório do let's encrypt..."
+echo "### Preparando diretório do let's encrypt (STAGING)..."
 mkdir -p "$data_path/conf/live/$DOMAIN"
 
 echo "### Baixando parâmetros TLS recomendados..."
@@ -58,7 +57,7 @@ docker compose run --rm --entrypoint "\
   rm -Rf /etc/letsencrypt/archive/$DOMAIN && \
   rm -Rf /etc/letsencrypt/renewal/$DOMAIN.conf" certbot
 
-echo "### Requisitando certificado Let's Encrypt verdadeiro..."
+echo "### Requisitando certificado Let's Encrypt verdadeiro (MODO STAGING)..."
 domain_args="-d $DOMAIN"
 
 # Ajuste do email se fornecido
@@ -73,9 +72,10 @@ docker compose run --rm --entrypoint "\
     $domain_args \
     --rsa-key-size $rsa_key_size \
     --agree-tos \
+    --staging \
     --force-renewal" certbot
 
 echo "### Recarregando Nginx..."
 docker compose exec frontend nginx -s reload
 
-echo "Pronto! O HTTPS está ativo e configurado para renovar automaticamente."
+echo "Pronto! O HTTPS (Staging/Testes) está ativo e configurado. Verifique no navegador se o domínio carrega (com aviso de certificado de teste)."
