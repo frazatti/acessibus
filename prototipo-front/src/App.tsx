@@ -58,6 +58,8 @@ export default function App() {
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const silenceSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const silenceFramesToSendRef = useRef(0);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
@@ -190,17 +192,56 @@ export default function App() {
   // ===================== ÁUDIO LOGIC =====================
   const startRecording = async () => {
     try {
+      // Cria o AudioContext IMEDIATAMENTE no clique/toque do usuário (User Gesture)
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      audioContextRef.current = audioContext;
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+
+      // Toca um silêncio em loop para manter o AudioContext ativo no iOS/Safari e evitar auto-suspend
+      try {
+        const silenceBuffer = audioContext.createBuffer(1, 1, 22050);
+        const silenceSource = audioContext.createBufferSource();
+        silenceSource.buffer = silenceBuffer;
+        silenceSource.loop = true;
+        silenceSource.connect(audioContext.destination);
+        silenceSource.start(0);
+        silenceSourceRef.current = silenceSource;
+      } catch (e) {
+        console.warn("Não foi possível iniciar o loop de silêncio para keep-alive:", e);
+      }
+
       setAudioStatus("Acessando microfone...");
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, sampleRate: 16000 }
       });
+
+      // Garante que o AudioContext está rodando (pois getUserMedia pode suspendê-lo no iOS/Safari)
+      if (audioContext.state === 'suspended') {
+        try {
+          await audioContext.resume();
+        } catch (e) {
+          console.error("Erro ao resumir AudioContext após getUserMedia:", e);
+        }
+      }
+
       setAudioStatus("Conectando ao assistente...");
       streamRef.current = stream;
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsHost = window.location.host;
       wsRef.current = new WebSocket(`${protocol}//${wsHost}/ws/chat/${credentials.userId}/${credentials.sessionId}`);
 
-      wsRef.current.onopen = () => {
+      wsRef.current.onopen = async () => {
+        // Tenta resumir novamente no onopen (ainda dentro do contexto do fluxo de gesto)
+        if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          try {
+            await audioContextRef.current.resume();
+          } catch (e) {
+            console.error("Erro ao resumir AudioContext no onopen:", e);
+          }
+        }
+
         setIsRecording(true);
         if (isPressedRef.current) {
           setIsMuted(false);
@@ -210,8 +251,6 @@ export default function App() {
           setAudioStatus("Microfone mutado. Aperte e segure para falar");
         }
 
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-        audioContextRef.current = audioContext;
         const source = audioContext.createMediaStreamSource(stream);
         const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
@@ -221,22 +260,28 @@ export default function App() {
           const pcmData = new Int16Array(inputData.length);
 
           if (isMutedRef.current) {
-            // Mute ativado (botão não pressionado): 
-            // Não enviamos o buffer pelo WebSocket para evitar consumo de 
-            // créditos da API transmitindo silêncio.
-            
-            // Garantimos apenas o mute local do output (microfonia)
-            const outputData = e.outputBuffer.getChannelData(0);
-            outputData.fill(0);
-            return;
+            if (silenceFramesToSendRef.current > 0) {
+              silenceFramesToSendRef.current--;
+              const silentPcm = new Int16Array(inputData.length);
+              wsRef.current.send(silentPcm.buffer);
+            } else {
+              // Mute completo (não envia nada)
+              const outputData = e.outputBuffer.getChannelData(0);
+              outputData.fill(0);
+              return;
+            }
+          } else {
+            // Sempre que o microfone está ativo, garante que o contador de silêncio residual está cheio
+            silenceFramesToSendRef.current = 6;
           }
 
-          for (let i = 0; i < inputData.length; i++) {
-            let s = Math.max(-1, Math.min(1, inputData[i]));
-            pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          if (!isMutedRef.current) {
+            for (let i = 0; i < inputData.length; i++) {
+              let s = Math.max(-1, Math.min(1, inputData[i]));
+              pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            wsRef.current.send(pcmData.buffer);
           }
-
-          wsRef.current.send(pcmData.buffer);
 
           const outputData = e.outputBuffer.getChannelData(0);
           outputData.fill(0);
@@ -251,6 +296,11 @@ export default function App() {
       wsRef.current.onmessage = async (event) => {
         try {
           if (!audioContextRef.current) return;
+
+          // Garante que o contexto não foi suspenso no meio do caminho
+          if (audioContextRef.current.state === 'suspended') {
+            await audioContextRef.current.resume();
+          }
 
           const buffer = await event.data.arrayBuffer();
           const int16Data = new Int16Array(buffer);
@@ -298,6 +348,13 @@ export default function App() {
     setIsMocking(false);
     setAudioStatus("Aperte e segure para falar");
 
+    if (silenceSourceRef.current) {
+      try {
+        silenceSourceRef.current.stop();
+      } catch (e) {}
+      silenceSourceRef.current = null;
+    }
+
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close();
     }
@@ -312,10 +369,14 @@ export default function App() {
 
   const handlePressStart = () => {
     isPressedRef.current = true;
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
     if (!isRecording) {
       startRecording();
     } else {
       setIsMuted(false);
+      silenceFramesToSendRef.current = 6;
       setAudioStatus("Conectado! Ouvindo...");
     }
   };
@@ -324,7 +385,13 @@ export default function App() {
     isPressedRef.current = false;
     if (isRecording) {
       setIsMuted(true);
+      silenceFramesToSendRef.current = 6; // Envia 6 frames de silêncio residual para triggar o VAD
       setAudioStatus("Microfone mutado. Aperte e segure para falar");
+      
+      // Reseta/Garante que o AudioContext está ativo no gesto de soltar o botão
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(e => console.error("Erro ao resumir no handlePressEnd:", e));
+      }
     } else {
       setAudioStatus("Conectando... (Mutado)");
     }

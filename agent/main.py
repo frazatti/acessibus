@@ -41,8 +41,26 @@ try:
 
     GeminiLlmConnection.send_content = _patched_send_content
     _adk_logger.info("Monkey patch aplicado com sucesso em GeminiLlmConnection.send_content")
-except ImportError:
-    pass
+
+    _original_send_realtime = GeminiLlmConnection.send_realtime
+
+    async def _patched_send_realtime(self, input):
+        if isinstance(input, types.Blob):
+            mime = getattr(input, "mime_type", "") or ""
+            if mime.startswith("audio/"):
+                _adk_logger.debug("MonkeyPatch: Enviando audio via parameter 'audio'")
+                await self._gemini_session.send_realtime_input(audio=input)
+                return
+            elif mime.startswith("video/"):
+                _adk_logger.debug("MonkeyPatch: Enviando video via parameter 'video'")
+                await self._gemini_session.send_realtime_input(video=input)
+                return
+        await _original_send_realtime(self, input)
+
+    GeminiLlmConnection.send_realtime = _patched_send_realtime
+    _adk_logger.info("Monkey patch aplicado com sucesso em GeminiLlmConnection.send_realtime")
+except ImportError as e:
+    logging.getLogger("adk_monkey_patch").error(f"Erro ao aplicar monkey patch: {e}")
 # ============================================================================
 
 # Define que o limitador de requisições rastreará o IP dos usuários
