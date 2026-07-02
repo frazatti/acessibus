@@ -21,7 +21,7 @@ else:
 # Verifica e carrega as chaves de API do Google Maps para acesso aos serviços
 gmaps = googlemaps.Client(key=API_MAPS)
 
-def buscarPlaceId(endereco: str) -> Optional[str]:
+def buscarPlaceId(endereco: str, tool_context=None) -> Optional[str]:
     print("Isso ai buscando place id")
     try:
         resultadoGeocode = gmaps.geocode(endereco)
@@ -29,12 +29,24 @@ def buscarPlaceId(endereco: str) -> Optional[str]:
         if not resultadoGeocode:
             return None
 
+        # Tenta salvar as coordenadas no estado da sessão (se houver contexto)
+        if tool_context and hasattr(tool_context, "state"):
+            try:
+                location = resultadoGeocode[0]['geometry']['location']
+                lat = location['lat']
+                lng = location['lng']
+                tool_context.state['target_lat'] = lat
+                tool_context.state['target_lng'] = lng
+                print(f"Salvo coordenadas do destino '{endereco}' no estado: lat={lat}, lng={lng}", flush=True)
+            except Exception as se:
+                print(f"Erro ao salvar coordenadas no estado via geocode: {se}", flush=True)
+
         return resultadoGeocode[0]['place_id']
     except Exception as e:
         print(f"Erro no geocoding: {e}")
         return None
 
-def buscarHorarios(id_origem: str, id_destino: str, horario_partida:Optional[str] = None) -> Optional[Union[list, str]]:
+def buscarHorarios(id_origem: str, id_destino: str, horario_partida:Optional[str] = None, tool_context=None) -> Optional[Union[list, str]]:
     try:
         print("Isso ai buscando os horario")
         if not horario_partida:
@@ -49,6 +61,16 @@ def buscarHorarios(id_origem: str, id_destino: str, horario_partida:Optional[str
         if not resultadoHorarios:
             print("Nenhuma rota de transporte público foi encontrada.")
             return None
+
+        # Tenta salvar as coordenadas finais do destino a partir da rota
+        if resultadoHorarios and tool_context and hasattr(tool_context, "state"):
+            try:
+                end_loc = resultadoHorarios[0]['legs'][0]['end_location']
+                tool_context.state['target_lat'] = end_loc['lat']
+                tool_context.state['target_lng'] = end_loc['lng']
+                print(f"Salvo coordenadas finais do destino via directions no estado: lat={end_loc['lat']}, lng={end_loc['lng']}", flush=True)
+            except Exception as se:
+                print(f"Erro ao salvar coordenadas no estado via directions: {se}", flush=True)
 
         return resultadoHorarios
     

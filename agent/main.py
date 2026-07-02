@@ -151,7 +151,41 @@ class PositionRequest(BaseModel):
 
 @app.post("/update-position")
 async def update_position(payload: PositionRequest):
-    distancia = haversine(payload.lat, payload.lng, payload.targetLat, payload.targetLng)
+    # Tenta obter as coordenadas finais reais do destino da sessão ativa
+    target_lat = payload.targetLat
+    target_lng = payload.targetLng
+    
+    loaded_from_memory = False
+    
+    # 1. Tenta buscar em memória na sessão de áudio ativa (tempo real durante a chamada)
+    try:
+        from modules.runner import active_sessions
+        active_session = active_sessions.get(payload.sessionID)
+        if active_session and active_session.state:
+            state = active_session.state
+            if "target_lat" in state and "target_lng" in state:
+                target_lat = state["target_lat"]
+                target_lng = state["target_lng"]
+                loaded_from_memory = True
+                print(f"UpdatePosition: Usando coordenadas do destino em memória ativa (Live): ({target_lat}, {target_lng})", flush=True)
+    except Exception as e:
+        print(f"Erro ao buscar destino em memória ativa: {e}", flush=True)
+
+    # 2. Se não estiver na memória, busca no histórico persistido em disco
+    if not loaded_from_memory:
+        try:
+            from modules.persistence import load_session_history
+            saved_data = load_session_history("admin", payload.sessionID)
+            if isinstance(saved_data, dict) and "state" in saved_data:
+                state = saved_data["state"]
+                if "target_lat" in state and "target_lng" in state:
+                    target_lat = state["target_lat"]
+                    target_lng = state["target_lng"]
+                    print(f"UpdatePosition: Usando coordenadas do destino em disco: ({target_lat}, {target_lng})", flush=True)
+        except Exception as e:
+            print(f"Erro ao buscar destino persistido em disco: {e}", flush=True)
+
+    distancia = haversine(payload.lat, payload.lng, target_lat, target_lng)
     
     # Se estiver a menos de 300 metros, avisa o agente
     if distancia < 300:
@@ -162,9 +196,9 @@ async def update_position(payload: PositionRequest):
             
         from modules import inject_mock_gps
         await inject_mock_gps(payload.sessionID, msg)
-        return {"status": "alert_sent", "distance": distancia}
+        return {"status": "alert_sent", "distance": distancia, "target_lat": target_lat, "target_lng": target_lng}
     
-    return {"status": "ok", "distance": distancia}
+    return {"status": "ok", "distance": distancia, "target_lat": target_lat, "target_lng": target_lng}
 
 # Rota WebSocket nativa dedicada exclusivamente a manter um canal contínuo de áudio (Live Stream)
 @app.websocket("/ws/chat/{userID}/{sessionID}")

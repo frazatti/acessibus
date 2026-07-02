@@ -13,6 +13,7 @@ from google.adk.agents.live_request_queue import LiveRequestQueue
 import asyncio
 
 active_audio_sessions = {}
+active_sessions = {}
 
 
 APP_NAME = "acessibus"
@@ -104,6 +105,7 @@ async def process_audio_stream(websocket: WebSocket, userID: str, sessionID: str
         session_id=sessionID,
         state=initial_state
     )
+    active_sessions[sessionID] = session
 
     # Como estamos lidando com um fluxo contínuo de áudio (live stream), optamos por 
     # não carregar o histórico estático inteiro mensagem a mensagem. Deixamos a API do Gemini 
@@ -166,6 +168,15 @@ async def process_audio_stream(websocket: WebSocket, userID: str, sessionID: str
         await asyncio.gather(receive_from_ws(), send_to_ws())
     finally:
         active_audio_sessions.pop(sessionID, None)
+        active_sessions.pop(sessionID, None)
+        # Salva o estado consolidado ao fechar a conexão de áudio
+        save_interaction(
+            user_id=userID,
+            session_id=sessionID,
+            user_msg="[Fim da sessão de áudio]",
+            agent_msg="[Fim da sessão de áudio]",
+            current_state=session.state
+        )
 
 async def inject_mock_gps(sessionID: str, message: str):
     queue = active_audio_sessions.get(sessionID)
