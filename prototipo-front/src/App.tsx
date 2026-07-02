@@ -246,6 +246,7 @@ export default function App() {
         if (isPressedRef.current) {
           setIsMuted(false);
           setAudioStatus("Conectado! Ouvindo...");
+          wsRef.current.send("START");
         } else {
           setIsMuted(true);
           setAudioStatus("Microfone mutado. Aperte e segure para falar");
@@ -378,6 +379,9 @@ export default function App() {
       setIsMuted(false);
       silenceFramesToSendRef.current = 6;
       setAudioStatus("Conectado! Ouvindo...");
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send("START");
+      }
     }
   };
 
@@ -387,6 +391,9 @@ export default function App() {
       setIsMuted(true);
       silenceFramesToSendRef.current = 6; // Envia 6 frames de silêncio residual para triggar o VAD
       setAudioStatus("Microfone mutado. Aperte e segure para falar");
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send("END");
+      }
       
       // Reseta/Garante que o AudioContext está ativo no gesto de soltar o botão
       if (audioContextRef.current && audioContextRef.current.state === 'suspended') {

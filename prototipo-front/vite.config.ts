@@ -11,12 +11,14 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'https://acessibus.org/api',
         changeOrigin: true,
+        secure: false,
         rewrite: (path) => path.replace(/^\/api/, '')
       },
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: 'wss://acessibus.org',
+        secure: false,
         ws: true
       }
     }

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Agente - Backend (Isolado)
   backend:
@@ -18,12 +16,11 @@ services:
     volumes:
       - agent-data:/app/sessions
       - ./agent/users.json:/app/users.json
+      - ./agent:/app
 
   # Frontend - Servidor Web e Proxy Reverso (Porta de Entrada)
   frontend:
-    build:
-      context: ./prototipo-front
-      dockerfile: Dockerfile
+    image: nginx:stable-alpine
     restart: always
     environment:
       - DOMAIN=${DOMAIN}
@@ -35,6 +32,8 @@ services:
     depends_on:
       - backend
     volumes:
+      - ./prototipo-front/dist:/usr/share/nginx/html
+      - ./prototipo-front/nginx.conf:/etc/nginx/templates/default.conf.template
       - ./data/certbot/conf:/etc/letsencrypt
       - ./data/certbot/www:/var/www/certbot
 

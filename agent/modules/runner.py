@@ -121,17 +121,26 @@ async def process_audio_stream(websocket: WebSocket, userID: str, sessionID: str
     async def receive_from_ws():
         try:
             while True:
-                # Fica ouvindo os pacotes de áudio sendo transmitidos pelo frontend...
-                data = await websocket.receive_bytes()
-                
-                # Encapsula os bytes usando realtime_input
-                # A API exige explicitamente PCM a 16kHz via websockets:
-                blob = types.Blob(mime_type="audio/pcm;rate=16000", data=data) 
-                queue.send_realtime(blob)
+                msg = await websocket.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+                if "bytes" in msg and msg["bytes"]:
+                    data = msg["bytes"]
+                    blob = types.Blob(mime_type="audio/pcm;rate=16000", data=data) 
+                    queue.send_realtime(blob)
+                elif "text" in msg and msg["text"]:
+                    text_cmd = msg["text"]
+                    if text_cmd == "START":
+                        print("Recebido sinal START: Iniciando atividade do usuário", flush=True)
+                        queue.send_activity_start()
+                    elif text_cmd == "END":
+                        print("Recebido sinal END: Finalizando atividade do usuário", flush=True)
+                        queue.send_activity_end()
         except WebSocketDisconnect:
-            queue.close()
+            pass
         except Exception as e:
-            print(f"Erro no receive WS: {e}")
+            print(f"Erro no receive WS: {e}", flush=True)
+        finally:
             queue.close()
 
     async def send_to_ws():
