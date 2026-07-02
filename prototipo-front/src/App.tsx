@@ -246,7 +246,7 @@ export default function App() {
         if (isPressedRef.current) {
           setIsMuted(false);
           setAudioStatus("Conectado! Ouvindo...");
-          wsRef.current.send("START");
+          wsRef.current?.send("START");
         } else {
           setIsMuted(true);
           setAudioStatus("Microfone mutado. Aperte e segure para falar");
