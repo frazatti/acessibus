@@ -19,6 +19,7 @@ services:
       - agent-data:/app/sessions
       - ./agent/users.json:/app/users.json
       - ./agent:/app
+    command: sh -c "echo 'nameserver 169.254.169.254' > /etc/resolv.conf && echo 'nameserver 127.0.0.11' >> /etc/resolv.conf && uvicorn main:app --host 0.0.0.0 --port 8000"
 
   # Frontend - Servidor Web e Proxy Reverso (Porta de Entrada)
   frontend:
@@ -50,7 +51,7 @@ services:
     volumes:
       - ./data/certbot/conf:/etc/letsencrypt
       - ./data/certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    entrypoint: "/bin/sh -c 'echo nameserver 169.254.169.254 > /etc/resolv.conf; trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 networks:
   acessibus-net:
