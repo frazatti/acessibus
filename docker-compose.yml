@@ -5,6 +5,9 @@ services:
       context: ./agent
       dockerfile: Dockerfile
     restart: always
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       - GOOGLE_MAPS_KEY=${GOOGLE_MAPS_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
@@ -41,6 +44,9 @@ services:
   certbot:
     image: certbot/certbot
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - acessibus-net
     volumes:
